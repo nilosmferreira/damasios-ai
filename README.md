@@ -1,87 +1,123 @@
-# Welcome to React Router!
+# 🏀 Sistema de Controle Financeiro - Basketball Pick-up Game
 
-A modern, production-ready template for building full-stack React applications using React Router.
+Um sistema completo para gestão de partidas de basquete e controle financeiro, construído com as tecnologias mais modernas.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## 🚀 Tecnologias Utilizadas
 
-## Features
+- **React Router v7** - Framework SSR/SPA moderno
+- **TypeScript** - Tipagem estática para maior segurança
+- **Prisma** - ORM type-safe para PostgreSQL
+- **Tailwind CSS v4** - Framework CSS utility-first
+- **Shadcn UI** - Componentes UI modernos e acessíveis
+- **Zod** - Validação de schemas TypeScript-first
+- **Docker** - Containerização para desenvolvimento
+- **PostgreSQL** - Banco de dados relacional
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+## 📋 Funcionalidades Implementadas
 
-## Getting Started
+### ✅ **Fase 1** - Base e Autenticação _(v0.1.0)_
 
-### Installation
+- Sistema de autenticação com sessões
+- Middleware de proteção de rotas
+- Interface de login/logout
+- Dashboard principal
+- Gestão de usuários (admin)
 
-Install the dependencies:
+### ✅ **Fase 2** - CRUD de Atletas _(v0.2.0)_
+
+- **Cadastro de Atletas**: Formulário completo com validação
+- **Edição de Atletas**: Interface modal para atualização
+- **Ativação/Desativação**: Toggle de status com feedback visual
+- **Listagem Avançada**: Filtros por nome, email, status e tipo de cobrança
+- **Paginação**: Sistema otimizado para performance
+- **Validação Robusta**: Schemas Zod para todos os formulários
+
+### 🎯 **Próximas Fases**
+
+- **Fase 3**: Gestão de Partidas (CRUD + Confirmações)
+- **Fase 4**: Controle Financeiro (Pendências + Fluxo de Caixa)
+- **Fase 5**: Sorteio de Quintetos
+- **Fase 6**: Relatórios e Refinamentos
+
+## �️ Setup do Projeto
+
+### Pré-requisitos
+
+- Node.js 18+
+- Docker e Docker Compose
+- pnpm (recomendado)
+
+### Instalação
 
 ```bash
-npm install
+# 1. Clonar o repositório
+git clone <repo-url>
+cd estudo-copilot
+
+# 2. Instalar dependências
+pnpm install
+
+# 3. Configurar ambiente
+cp .env.example .env
+
+# 4. Subir banco de dados
+docker-compose up -d
+
+# 5. Executar migrações
+pnpm run db:migrate
+
+# 6. Popular banco (usuário admin)
+pnpm run db:seed
 ```
 
-### Development
-
-Start the development server with HMR:
+### Desenvolvimento
 
 ```bash
-npm run dev
+# Iniciar servidor de desenvolvimento
+pnpm run dev
+
+# Comandos úteis
+pnpm run db:reset    # Reset do banco
+pnpm run db:studio   # Interface Prisma Studio
 ```
 
-Your application will be available at `http://localhost:5173`.
+## 🔐 Credenciais Padrão
 
-## Building for Production
+- **Admin**: `admin@sistema.com` / `admin123`
 
-Create a production build:
+## 📊 Progresso do Projeto
 
-```bash
-npm run build
-```
+**Requisitos Funcionais**: 7/25 (28%) ✅  
+**Requisitos Não Funcionais**: 1/6 (17%) ✅
 
-## Deployment
+### Estrutura do Banco
 
-### Docker Deployment
+- **Users** - Usuários do sistema (Admin/Atleta)
+- **Athletes** - Perfis de atletas
+- **Places** - Locais das partidas
+- **Matches** - Partidas agendadas
+- **MatchConfirmations** - Confirmações de presença
+- **FinancialPendings** - Pendências financeiras
+- **CashFlows** - Movimentações do caixa
+- **Participations** - Participações em partidas
 
-To build and run using Docker:
+## 🎨 Interface
 
-```bash
-docker build -t my-app .
+Interface moderna construída com:
 
-# Run the container
-docker run -p 3000:3000 my-app
-```
+- **Shadcn UI** - Componentes reutilizáveis
+- **Tailwind CSS** - Estilização utility-first
+- **Lucide Icons** - Ícones modernos
+- **Design Responsivo** - Mobile-first
 
-The containerized application can be deployed to any platform that supports Docker, including:
+## 📚 Documentação
 
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
+- [`TODO.md`](./TODO.md) - Checklist detalhado de funcionalidades
+- [`requeriments.md`](./requeriments.md) - Especificação completa do sistema
+- Fluxogramas em Mermaid para processos complexos
 
-### DIY Deployment
+## 🏗️ Arquitetura
 
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
+### SSR com React Router v7
 
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+- **File-based routing** - Roteamento baseado em arquivos

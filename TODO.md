@@ -69,7 +69,7 @@
 
 ---
 
-## 🎯 **FASE 2 COMPLETA** - ✅ **CRUD Completo de Atletas** 
+## 🎯 **FASE 2 COMPLETA** - ✅ **CRUD Completo de Atletas**
 
 **📅 Data de Conclusão:** 24 de Junho de 2025
 
@@ -91,6 +91,7 @@
 - ✅ `app/routes.ts` - Rota `/atletas` adicionada
 
 ### **Próxima Fase:**
+
 🎯 **Fase 3**: Gestão de Partidas (CRUD + Confirmações)
 
 ---
