@@ -136,7 +136,7 @@ export async function action({ request }: Route.ActionArgs) {
           },
         });
 
-        return { success: true, message: "Athlete created successfully!" } as ActionData;
+        return { success: true, message: "Atleta criado com sucesso!" } as ActionData;
       }
 
       case "update": {
@@ -156,7 +156,7 @@ export async function action({ request }: Route.ActionArgs) {
           data: updateData,
         });
 
-        return { success: true, message: "Athlete updated successfully!" } as ActionData;
+        return { success: true, message: "Atleta atualizado com sucesso!" } as ActionData;
       }
 
       case "toggleStatus": {
@@ -172,29 +172,29 @@ export async function action({ request }: Route.ActionArgs) {
           data: { isActive: validatedData.isActive },
         });
 
-        return { success: true, message: `Athlete ${validatedData.isActive ? 'activated' : 'deactivated'} successfully!` } as ActionData;
+        return { success: true, message: `Atleta ${validatedData.isActive ? 'ativado' : 'desativado'} com sucesso!` } as ActionData;
       }
 
       default:
-        return { error: "Invalid action" } as ActionData;
+        return { error: "Ação inválida" } as ActionData;
     }
   } catch (error: any) {
     if (error.name === "ZodError") {
       return { 
-        error: "Validation failed", 
+        error: "Falha na validação", 
         fieldErrors: error.flatten().fieldErrors 
       } as ActionData;
     }
     
     console.error("Action error:", error);
-    return { error: "An unexpected error occurred" } as ActionData;
+    return { error: "Ocorreu um erro inesperado" } as ActionData;
   }
 }
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Athletes - Basketball Management" },
-    { name: "description", content: "Manage athletes and their information" },
+    { title: "Atletas - Sistema de Basquete" },
+    { name: "description", content: "Gerenciar atletas e suas informações" },
   ];
 }
 
@@ -208,12 +208,12 @@ function AthleteFormFields({ athlete, actionData }: { athlete?: any; actionData?
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor="name">Name *</Label>
+        <Label htmlFor="name">Nome *</Label>
         <Input
           id="name"
           name="name"
           defaultValue={athlete?.name || ""}
-          placeholder="Enter athlete name"
+          placeholder="Digite o nome do atleta"
           className={fieldErrors.name ? "border-red-500" : ""}
         />
         {fieldErrors.name && (
@@ -222,10 +222,10 @@ function AthleteFormFields({ athlete, actionData }: { athlete?: any; actionData?
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="billingType">Billing Type *</Label>
+        <Label htmlFor="billingType">Tipo de Cobrança *</Label>
         <Select name="billingType" defaultValue={athlete?.billingType || ""}>
           <SelectTrigger className={fieldErrors.billingType ? "border-red-500" : ""}>
-            <SelectValue placeholder="Select billing type" />
+            <SelectValue placeholder="Selecione o tipo de cobrança" />
           </SelectTrigger>
           <SelectContent>
             {billingTypes.map((type) => (
@@ -241,7 +241,7 @@ function AthleteFormFields({ athlete, actionData }: { athlete?: any; actionData?
       </div>
 
       <div className="space-y-2">
-        <Label>Preferred Positions *</Label>
+        <Label>Posições Preferidas *</Label>
         <div className="grid grid-cols-2 gap-2">
           {basketballPositions.map((position) => (
             <div key={position} className="flex items-center space-x-2">
@@ -276,7 +276,7 @@ function AthleteFormFields({ athlete, actionData }: { athlete?: any; actionData?
           value="true"
           defaultChecked={athlete?.isActive ?? true}
         />
-        <Label htmlFor="isActive">Active Athlete</Label>
+        <Label htmlFor="isActive">Atleta Ativo</Label>
       </div>
     </>
   );
@@ -292,14 +292,14 @@ function CreateAthleteDialog({ actionData }: { actionData?: ActionData }) {
       <DialogTrigger asChild>
         <Button>
           <PlusIcon className="h-4 w-4 mr-2" />
-          Add Athlete
+          Adicionar Atleta
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Athlete</DialogTitle>
+          <DialogTitle>Adicionar Novo Atleta</DialogTitle>
           <DialogDescription>
-            Create a new athlete profile. All fields marked with * are required.
+            Criar um novo perfil de atleta. Todos os campos marcados com * são obrigatórios.
           </DialogDescription>
         </DialogHeader>
         <Form method="post" className="space-y-4">
@@ -307,7 +307,7 @@ function CreateAthleteDialog({ actionData }: { actionData?: ActionData }) {
           <AthleteFormFields actionData={actionData} />
           <div className="flex justify-end space-x-2">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Athlete"}
+              {isSubmitting ? "Criando..." : "Criar Atleta"}
             </Button>
           </div>
         </Form>
@@ -327,14 +327,14 @@ function EditAthleteDialog({ athlete, actionData }: { athlete: any; actionData?:
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <PencilIcon className="h-4 w-4 mr-2" />
-          Edit
+          Editar
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Athlete</DialogTitle>
+          <DialogTitle>Editar Atleta</DialogTitle>
           <DialogDescription>
-            Update athlete information. All fields marked with * are required.
+            Atualizar informações do atleta. Todos os campos marcados com * são obrigatórios.
           </DialogDescription>
         </DialogHeader>
         <Form method="post" className="space-y-4">
@@ -343,7 +343,7 @@ function EditAthleteDialog({ athlete, actionData }: { athlete: any; actionData?:
           <AthleteFormFields athlete={athlete} actionData={actionData} />
           <div className="flex justify-end space-x-2">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Updating..." : "Update Athlete"}
+              {isSubmitting ? "Atualizando..." : "Atualizar Atleta"}
             </Button>
           </div>
         </Form>
@@ -366,7 +366,7 @@ function AthleteCard({ athlete, actionData }: { athlete: any; actionData?: Actio
             <CardTitle className="flex items-center gap-2">
               {athlete.name}
               <Badge variant={athlete.isActive ? "default" : "secondary"}>
-                {athlete.isActive ? "Active" : "Inactive"}
+                {athlete.isActive ? "Ativo" : "Inativo"}
               </Badge>
             </CardTitle>
             <CardDescription className="flex items-center gap-2">
@@ -393,12 +393,12 @@ function AthleteCard({ athlete, actionData }: { athlete: any; actionData?: Actio
                 ) : athlete.isActive ? (
                   <>
                     <UserXIcon className="h-4 w-4 mr-2" />
-                    Deactivate
+                    Desativar
                   </>
                 ) : (
                   <>
                     <UserCheckIcon className="h-4 w-4 mr-2" />
-                    Activate
+                    Ativar
                   </>
                 )}
               </Button>
@@ -410,7 +410,7 @@ function AthleteCard({ athlete, actionData }: { athlete: any; actionData?: Actio
         <div className="space-y-2">
           {athlete.preferredPositions.length > 0 && (
             <div>
-              <span className="text-sm font-medium">Positions: </span>
+              <span className="text-sm font-medium">Posições: </span>
               <div className="flex flex-wrap gap-1 mt-1">
                 {athlete.preferredPositions.map((position: string) => (
                   <Badge key={position} variant="outline" className="text-xs">
@@ -424,15 +424,15 @@ function AthleteCard({ athlete, actionData }: { athlete: any; actionData?: Actio
           <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 mt-4">
             <div className="text-center">
               <p className="font-medium text-gray-900">{athlete._count.participations}</p>
-              <p>Participations</p>
+              <p>Participações</p>
             </div>
             <div className="text-center">
               <p className="font-medium text-gray-900">{athlete._count.matchConfirmations}</p>
-              <p>Confirmations</p>
+              <p>Confirmações</p>
             </div>
             <div className="text-center">
               <p className="font-medium text-gray-900">{athlete._count.financialPendencies}</p>
-              <p>Pending</p>
+              <p>Pendências</p>
             </div>
           </div>
         </div>
@@ -445,19 +445,19 @@ function FiltersSection({ filters }: { filters: AthleteFilters }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Filters</CardTitle>
+        <CardTitle className="text-lg">Filtros</CardTitle>
       </CardHeader>
       <CardContent>
         <Form method="get" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="search">Search</Label>
+              <Label htmlFor="search">Buscar</Label>
               <div className="relative">
                 <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="search"
                   name="search"
-                  placeholder="Name or email..."
+                  placeholder="Nome ou email..."
                   defaultValue={filters.search}
                   className="pl-10"
                 />
@@ -471,30 +471,30 @@ function FiltersSection({ filters }: { filters: AthleteFilters }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Athletes</SelectItem>
-                  <SelectItem value="active">Active Only</SelectItem>
-                  <SelectItem value="inactive">Inactive Only</SelectItem>
+                  <SelectItem value="all">Todos os Atletas</SelectItem>
+                  <SelectItem value="active">Apenas Ativos</SelectItem>
+                  <SelectItem value="inactive">Apenas Inativos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="billingType">Billing Type</Label>
+              <Label htmlFor="billingType">Tipo de Cobrança</Label>
               <Select name="billingType" defaultValue={filters.billingType}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="DIARISTA">Per Game</SelectItem>
-                  <SelectItem value="MENSALISTA">Monthly</SelectItem>
+                  <SelectItem value="all">Todos os Tipos</SelectItem>
+                  <SelectItem value="DIARISTA">Por Jogo</SelectItem>
+                  <SelectItem value="MENSALISTA">Mensalista</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex items-end">
               <Button type="submit" className="w-full">
-                Apply Filters
+                Aplicar Filtros
               </Button>
             </div>
           </div>
@@ -512,9 +512,9 @@ export default function AthletesPage({ loaderData }: Route.ComponentProps) {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Athletes</h1>
+          <h1 className="text-3xl font-bold">Atletas</h1>
           <p className="text-gray-600">
-            Manage athlete profiles and information
+            Gerenciar perfis e informações dos atletas
           </p>
         </div>
         <CreateAthleteDialog actionData={actionData} />
@@ -536,10 +536,10 @@ export default function AthletesPage({ loaderData }: Route.ComponentProps) {
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600">
-          Showing {athletes.length} of {pagination.totalCount} athletes
+          Mostrando {athletes.length} de {pagination.totalCount} atletas
         </p>
         <div className="text-sm text-gray-600">
-          Page {pagination.currentPage} of {pagination.totalPages}
+          Página {pagination.currentPage} de {pagination.totalPages}
         </div>
       </div>
 
@@ -547,7 +547,7 @@ export default function AthletesPage({ loaderData }: Route.ComponentProps) {
         {athletes.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <p className="text-gray-500">No athletes found matching your criteria.</p>
+              <p className="text-gray-500">Nenhum atleta encontrado com os critérios selecionados.</p>
             </CardContent>
           </Card>
         ) : (

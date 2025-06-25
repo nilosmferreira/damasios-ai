@@ -16,30 +16,30 @@ export const billingTypes = ["DIARISTA", "MENSALISTA"] as const;
 export const createAthleteSchema = z.object({
   name: z
     .string()
-    .min(2, "Name must be at least 2 characters")
-    .max(100, "Name must be at most 100 characters")
-    .regex(/^[a-zA-ZÀ-ÿ\s]+$/, "Name can only contain letters and spaces"),
+    .min(2, "Nome deve ter pelo menos 2 caracteres")
+    .max(100, "Nome deve ter no máximo 100 caracteres")
+    .regex(/^[a-zA-ZÀ-ÿ\s]+$/, "Nome pode conter apenas letras e espaços"),
     
   billingType: z.enum(billingTypes, {
-    errorMap: () => ({ message: "Please select a valid billing type" }),
+    errorMap: () => ({ message: "Por favor, selecione um tipo de cobrança válido" }),
   }),
   
   preferredPositions: z
     .array(z.enum(basketballPositions))
-    .min(1, "Please select at least one preferred position")
-    .max(3, "You can select at most 3 preferred positions"),
+    .min(1, "Por favor, selecione pelo menos uma posição preferida")
+    .max(3, "Você pode selecionar no máximo 3 posições preferidas"),
     
   isActive: z.boolean().default(true),
 });
 
 // Schema for updating an athlete
 export const updateAthleteSchema = createAthleteSchema.partial().extend({
-  id: z.string().uuid("Invalid athlete ID"),
+  id: z.string().uuid("ID de atleta inválido"),
 });
 
 // Schema for toggling athlete active status
 export const toggleAthleteStatusSchema = z.object({
-  id: z.string().uuid("Invalid athlete ID"),
+  id: z.string().uuid("ID de atleta inválido"),
   isActive: z.boolean(),
 });
 
