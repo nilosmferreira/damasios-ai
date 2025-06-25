@@ -1,0 +1,26 @@
+flowchart TD
+    subgraph Coordenador/Administrador
+        A[Início] --> B{Gerenciar Partidas?}
+        B -- Sim --> C[Cadastrar Nova Partida RF005] --> D[Exibir Lista de Partidas RF007]
+        B -- Sim --> E[Editar Partida Existente RF006]
+        D --> F{Partida Selecionada}
+        E --> F
+        F -- Coordenador/Admin --> G[Registrar Participação Efetiva RF010]
+        G --> H[Gerar Pendência Financeira Diarista RF011]
+        H --> I[Exibir Lista de Atletas Confirmados RF009]
+        I --> J[Sortear Quintetos RF019]
+        J -- Prioriza Mensalistas --> K[Distribuir por Posições RF020 RF021]
+        K --> L[Exibir Quintetos Sugeridos RF022]
+        L --> M[Fim Fluxo Partidas Coordenador]
+    end
+
+    subgraph Atleta
+        N[Início] --> O[Acessar Lista de Partidas RF007]
+        O --> P{Partida Disponível?}
+        P -- Sim --> Q[Confirmar Presença na Partida RF008]
+        Q --> R[Presença Confirmada]
+        R --> S[Fim Fluxo Atleta]
+    end
+
+    G --> R
+    H --> S

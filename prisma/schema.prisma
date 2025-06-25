@@ -1,0 +1,150 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BillingType {
+  DIARISTA // Daily payer
+  MENSALISTA // Monthly payer
+}
+
+enum PlayerPosition {
+  ARMADOR // Point Guard
+  ALA // Forward
+  ALA_ARMADOR // Shooting Guard
+  PIVO // Center
+  ALA_PIVO // Power Forward
+}
+
+enum FinancialStatus {
+  PENDENTE // Pending
+  PAGO // Paid
+}
+
+enum UserRole {
+  ADMINISTRADOR // Coordinator/Administrator
+  ATLETA // Athlete
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String // Hashed password
+  role      UserRole
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  athlete Athlete? // One-to-one relationship with Athlete
+
+  @@map("users")
+}
+
+model Athlete {
+  id                 String           @id @default(uuid())
+  userId             String           @unique @map("user_id")
+  name               String
+  billingType        BillingType
+  isActive           Boolean          @default(true) @map("is_active")
+  preferredPositions PlayerPosition[]
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchConfirmations  MatchConfirmation[]
+  participations      Participation[]
+  financialPendencies FinancialPending[]
+
+  @@map("athletes")
+}
+
+model Place {
+  id        String   @id @default(uuid())
+  name      String //
+  address   String? // Optional address
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  matches Match[] // Matches that take place at this location
+
+  @@map("places")
+}
+
+model Match {
+  id        String   @id @default(uuid())
+  date      DateTime @db.Date()
+  time      DateTime @db.Time()
+  placeId   String   @map("place_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  place              Place               @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  matchConfirmations MatchConfirmation[]
+  participations     Participation[]
+
+  @@map("matches")
+}
+
+model MatchConfirmation {
+  id        String   @id @default(uuid())
+  athleteId String   @map("athlete_id")
+  matchId   String   @map("match_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  match   Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([athleteId, matchId])
+  @@map("match_confirmations")
+}
+
+model Participation {
+  id        String   @id @default(uuid())
+  athleteId String   @map("athlete_id")
+  matchId   String   @map("match_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  match   Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([athleteId, matchId])
+  @@map("participations")
+}
+
+model FinancialPending {
+  id          String          @id @default(uuid())
+  athleteId   String          @map("athlete_id")
+  amount      Decimal         @db.Decimal(18, 2)
+  dueDate     DateTime        @map("due_date") @db.Date()
+  status      FinancialStatus @default(PENDENTE)
+  description String?
+  paymentDate DateTime?       @map("payment_date")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@map("financial_pendings")
+}
+
+model CashFlow {
+  id          String       @id @default(uuid())
+  description String //
+  amount      Decimal      @db.Decimal(18, 2) // Amount of the cash flow
+  type        CashFlowType // INFLOW or OUTFLOW
+  date        DateTime     @default(now())
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@map("cash_flows")
+}
+
+enum CashFlowType {
+  INFLOW // Entrada
+  OUTFLOW // Saída
+}

@@ -1,0 +1,25 @@
+graph TD
+    subgraph Coordenador/Administrador
+        A[Início] --> B{Gerenciar Finanças?};
+        B -- Sim --> C[Registrar Entrada de Caixa (RF015)];
+        B -- Sim --> D[Registrar Saída de Caixa (RF016)];
+        B -- Sim --> E[Exibir Status Pendências Financeiras (RF014)];
+        E -- Selecionar Pendência --> F[Registrar Pagamento de Pendência (RF013)];
+        F --> E; // Volta para exibir status atualizado
+
+        G[Processo Mensal] --> H[Gerar Pendência Mensalista (RF012)];
+        H --> E; // Pendências mensalistas aparecem no status
+
+        I[Fim do Mês] --> J[Gerar Relatório Mensal de Caixa (RF017)];
+        J --> K[Transferir Saldo Anterior (RF018)];
+        K --> L[Fim Fluxo Financeiro];
+    end
+
+    subgraph Sistema (Processos Automáticos)
+        M[Participação de Diarista Registrada] --> N[Gerar Pendência Financeira Diarista (RF011)];
+        N --> O[Adicionar Pendência ao Sistema];
+        O --> E; // Pendências de diaristas aparecem no status
+
+        P[Dia 10 do Mês (ou similar)] --> Q[Verificar Mensalistas Ativos];
+        Q --> H; // Aciona a geração de pendência mensalista
+    end
