@@ -1,76 +1,585 @@
 import type { Route } from "./+types/athletes";
+import { Form, useLoaderData, useActionData, useNavigation } from "react-router";
 import { prisma } from "~/lib/prisma/db.server";
+import { requireUser } from "~/lib/auth.server";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Badge } from "~/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "~/components/ui/dialog";
+import { 
+  createAthleteSchema, 
+  updateAthleteSchema, 
+  toggleAthleteStatusSchema,
+  athleteFiltersSchema,
+  basketballPositions,
+  billingTypes,
+  getPositionDisplayName,
+  getBillingTypeDisplayName,
+  type AthleteFilters 
+} from "~/lib/schemas/athlete";
+import { PlusIcon, PencilIcon, UserCheckIcon, UserXIcon, SearchIcon } from "lucide-react";
+import { useState } from "react";
 
-export async function loader() {
-  const athletes = await prisma.athlete.findMany({
-    include: {
-      user: {
-        select: {
-          email: true,
-          role: true,
-        },
-      },
-      _count: {
-        select: {
-          matchConfirmations: true,
-          participations: true,
-          financialPendencies: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
+type ActionData = 
+  | { success: true; message: string }
+  | { error: string; fieldErrors?: Record<string, string[]> }
+  | null;
+
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireUser(request);
+  
+  const url = new URL(request.url);
+  const filtersResult = athleteFiltersSchema.safeParse({
+    status: url.searchParams.get("status") || "active",
+    billingType: url.searchParams.get("billingType") || "all",
+    search: url.searchParams.get("search") || undefined,
+    page: url.searchParams.get("page") || "1",
+    limit: url.searchParams.get("limit") || "20",
   });
 
-  return { athletes };
+  const filters = filtersResult.success ? filtersResult.data : {
+    status: "active" as const,
+    billingType: "all" as const,
+    search: undefined,
+    page: 1,
+    limit: 20,
+  };
+
+  // Build where clause based on filters
+  const whereClause: any = {};
+  
+  if (filters.status !== "all") {
+    whereClause.isActive = filters.status === "active";
+  }
+  
+  if (filters.billingType !== "all") {
+    whereClause.billingType = filters.billingType;
+  }
+  
+  if (filters.search) {
+    whereClause.OR = [
+      { name: { contains: filters.search, mode: "insensitive" } },
+      { user: { email: { contains: filters.search, mode: "insensitive" } } },
+    ];
+  }
+
+  const [athletes, totalCount] = await Promise.all([
+    prisma.athlete.findMany({
+      where: whereClause,
+      include: {
+        user: {
+          select: {
+            email: true,
+            role: true,
+          },
+        },
+        _count: {
+          select: {
+            matchConfirmations: true,
+            participations: true,
+            financialPendencies: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (filters.page - 1) * filters.limit,
+      take: filters.limit,
+    }),
+    prisma.athlete.count({ where: whereClause }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / filters.limit);
+
+  return { 
+    athletes, 
+    filters, 
+    pagination: { totalCount, totalPages, currentPage: filters.page }
+  };
+}
+
+export async function action({ request }: Route.ActionArgs) {
+  await requireUser(request);
+  
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  try {
+    switch (intent) {
+      case "create": {
+        const data = {
+          name: formData.get("name"),
+          billingType: formData.get("billingType"),
+          preferredPositions: formData.getAll("preferredPositions"),
+          isActive: formData.get("isActive") === "true",
+        };
+
+        const validatedData = createAthleteSchema.parse(data);
+
+        // Create user first
+        const user = await prisma.user.create({
+          data: {
+            email: `${validatedData.name.toLowerCase().replace(/\s+/g, ".")}@temp.com`,
+            password: "temp123", // Should be changed on first login
+            role: "ATLETA",
+          },
+        });
+
+        // Create athlete
+        await prisma.athlete.create({
+          data: {
+            ...validatedData,
+            userId: user.id,
+          },
+        });
+
+        return { success: true, message: "Athlete created successfully!" } as ActionData;
+      }
+
+      case "update": {
+        const data = {
+          id: formData.get("id"),
+          name: formData.get("name"),
+          billingType: formData.get("billingType"),
+          preferredPositions: formData.getAll("preferredPositions"),
+          isActive: formData.get("isActive") === "true",
+        };
+
+        const validatedData = updateAthleteSchema.parse(data);
+        const { id, ...updateData } = validatedData;
+
+        await prisma.athlete.update({
+          where: { id },
+          data: updateData,
+        });
+
+        return { success: true, message: "Athlete updated successfully!" } as ActionData;
+      }
+
+      case "toggleStatus": {
+        const data = {
+          id: formData.get("id"),
+          isActive: formData.get("isActive") === "true",
+        };
+
+        const validatedData = toggleAthleteStatusSchema.parse(data);
+
+        await prisma.athlete.update({
+          where: { id: validatedData.id },
+          data: { isActive: validatedData.isActive },
+        });
+
+        return { success: true, message: `Athlete ${validatedData.isActive ? 'activated' : 'deactivated'} successfully!` } as ActionData;
+      }
+
+      default:
+        return { error: "Invalid action" } as ActionData;
+    }
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return { 
+        error: "Validation failed", 
+        fieldErrors: error.flatten().fieldErrors 
+      } as ActionData;
+    }
+    
+    console.error("Action error:", error);
+    return { error: "An unexpected error occurred" } as ActionData;
+  }
 }
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Athletes - Sport Management" },
+    { title: "Athletes - Basketball Management" },
     { name: "description", content: "Manage athletes and their information" },
   ];
 }
 
-export default function AthletesPage({ loaderData }: Route.ComponentProps) {
-  const { athletes } = loaderData;
+function AthleteFormFields({ athlete, actionData }: { athlete?: any; actionData?: ActionData }) {
+  const [selectedPositions, setSelectedPositions] = useState<string[]>(
+    athlete?.preferredPositions || []
+  );
+
+  const fieldErrors = (actionData && 'fieldErrors' in actionData) ? actionData.fieldErrors || {} : {};
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Athletes</h1>
-      
-      <div className="grid gap-4">
-        {athletes.map((athlete) => (
-          <div
-            key={athlete.id}
-            className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-xl font-semibold">{athlete.name}</h3>
-                <p className="text-gray-600">{athlete.user.email}</p>
-                <p className="text-sm text-gray-500">
-                  {athlete.billingType} • {athlete.isActive ? 'Active' : 'Inactive'}
-                </p>
-              </div>
-              
-              <div className="text-right text-sm text-gray-500">
-                <p>{athlete._count.participations} participations</p>
-                <p>{athlete._count.matchConfirmations} confirmations</p>
-                <p>{athlete._count.financialPendencies} pending payments</p>
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="name">Name *</Label>
+        <Input
+          id="name"
+          name="name"
+          defaultValue={athlete?.name || ""}
+          placeholder="Enter athlete name"
+          className={fieldErrors.name ? "border-red-500" : ""}
+        />
+        {fieldErrors.name && (
+          <p className="text-sm text-red-500">{fieldErrors.name[0]}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="billingType">Billing Type *</Label>
+        <Select name="billingType" defaultValue={athlete?.billingType || ""}>
+          <SelectTrigger className={fieldErrors.billingType ? "border-red-500" : ""}>
+            <SelectValue placeholder="Select billing type" />
+          </SelectTrigger>
+          <SelectContent>
+            {billingTypes.map((type) => (
+              <SelectItem key={type} value={type}>
+                {getBillingTypeDisplayName(type)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {fieldErrors.billingType && (
+          <p className="text-sm text-red-500">{fieldErrors.billingType[0]}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Preferred Positions *</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {basketballPositions.map((position) => (
+            <div key={position} className="flex items-center space-x-2">
+              <Checkbox
+                id={position}
+                name="preferredPositions"
+                value={position}
+                defaultChecked={selectedPositions.includes(position)}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setSelectedPositions([...selectedPositions, position]);
+                  } else {
+                    setSelectedPositions(selectedPositions.filter(p => p !== position));
+                  }
+                }}
+              />
+              <Label htmlFor={position} className="text-sm">
+                {getPositionDisplayName(position)}
+              </Label>
+            </div>
+          ))}
+        </div>
+        {fieldErrors.preferredPositions && (
+          <p className="text-sm text-red-500">{fieldErrors.preferredPositions[0]}</p>
+        )}
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="isActive"
+          name="isActive"
+          value="true"
+          defaultChecked={athlete?.isActive ?? true}
+        />
+        <Label htmlFor="isActive">Active Athlete</Label>
+      </div>
+    </>
+  );
+}
+
+function CreateAthleteDialog({ actionData }: { actionData?: ActionData }) {
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting" && 
+    navigation.formData?.get("intent") === "create";
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button>
+          <PlusIcon className="h-4 w-4 mr-2" />
+          Add Athlete
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add New Athlete</DialogTitle>
+          <DialogDescription>
+            Create a new athlete profile. All fields marked with * are required.
+          </DialogDescription>
+        </DialogHeader>
+        <Form method="post" className="space-y-4">
+          <input type="hidden" name="intent" value="create" />
+          <AthleteFormFields actionData={actionData} />
+          <div className="flex justify-end space-x-2">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Athlete"}
+            </Button>
+          </div>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditAthleteDialog({ athlete, actionData }: { athlete: any; actionData?: ActionData }) {
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting" && 
+    navigation.formData?.get("intent") === "update" &&
+    navigation.formData?.get("id") === athlete.id;
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <PencilIcon className="h-4 w-4 mr-2" />
+          Edit
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Athlete</DialogTitle>
+          <DialogDescription>
+            Update athlete information. All fields marked with * are required.
+          </DialogDescription>
+        </DialogHeader>
+        <Form method="post" className="space-y-4">
+          <input type="hidden" name="intent" value="update" />
+          <input type="hidden" name="id" value={athlete.id} />
+          <AthleteFormFields athlete={athlete} actionData={actionData} />
+          <div className="flex justify-end space-x-2">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Updating..." : "Update Athlete"}
+            </Button>
+          </div>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AthleteCard({ athlete, actionData }: { athlete: any; actionData?: ActionData }) {
+  const navigation = useNavigation();
+  const isTogglingStatus = navigation.state === "submitting" && 
+    navigation.formData?.get("intent") === "toggleStatus" &&
+    navigation.formData?.get("id") === athlete.id;
+
+  return (
+    <Card className="transition-shadow hover:shadow-md">
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              {athlete.name}
+              <Badge variant={athlete.isActive ? "default" : "secondary"}>
+                {athlete.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </CardTitle>
+            <CardDescription className="flex items-center gap-2">
+              {athlete.user.email}
+              <Badge variant="outline">
+                {getBillingTypeDisplayName(athlete.billingType)}
+              </Badge>
+            </CardDescription>
+          </div>
+          <div className="flex space-x-2">
+            <EditAthleteDialog athlete={athlete} actionData={actionData} />
+            <Form method="post" className="inline">
+              <input type="hidden" name="intent" value="toggleStatus" />
+              <input type="hidden" name="id" value={athlete.id} />
+              <input type="hidden" name="isActive" value={(!athlete.isActive).toString()} />
+              <Button
+                type="submit"
+                variant={athlete.isActive ? "destructive" : "default"}
+                size="sm"
+                disabled={isTogglingStatus}
+              >
+                {isTogglingStatus ? (
+                  "..."
+                ) : athlete.isActive ? (
+                  <>
+                    <UserXIcon className="h-4 w-4 mr-2" />
+                    Deactivate
+                  </>
+                ) : (
+                  <>
+                    <UserCheckIcon className="h-4 w-4 mr-2" />
+                    Activate
+                  </>
+                )}
+              </Button>
+            </Form>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {athlete.preferredPositions.length > 0 && (
+            <div>
+              <span className="text-sm font-medium">Positions: </span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {athlete.preferredPositions.map((position: string) => (
+                  <Badge key={position} variant="outline" className="text-xs">
+                    {getPositionDisplayName(position as any)}
+                  </Badge>
+                ))}
               </div>
             </div>
-            
-            {athlete.preferredPositions.length > 0 && (
-              <div className="mt-2">
-                <span className="text-sm font-medium">Positions: </span>
-                {athlete.preferredPositions.join(', ')}
-              </div>
-            )}
+          )}
+          
+          <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 mt-4">
+            <div className="text-center">
+              <p className="font-medium text-gray-900">{athlete._count.participations}</p>
+              <p>Participations</p>
+            </div>
+            <div className="text-center">
+              <p className="font-medium text-gray-900">{athlete._count.matchConfirmations}</p>
+              <p>Confirmations</p>
+            </div>
+            <div className="text-center">
+              <p className="font-medium text-gray-900">{athlete._count.financialPendencies}</p>
+              <p>Pending</p>
+            </div>
           </div>
-        ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FiltersSection({ filters }: { filters: AthleteFilters }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Filters</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form method="get" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="search">Search</Label>
+              <div className="relative">
+                <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="search"
+                  name="search"
+                  placeholder="Name or email..."
+                  defaultValue={filters.search}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select name="status" defaultValue={filters.status}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Athletes</SelectItem>
+                  <SelectItem value="active">Active Only</SelectItem>
+                  <SelectItem value="inactive">Inactive Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billingType">Billing Type</Label>
+              <Select name="billingType" defaultValue={filters.billingType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="DIARISTA">Per Game</SelectItem>
+                  <SelectItem value="MENSALISTA">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button type="submit" className="w-full">
+                Apply Filters
+              </Button>
+            </div>
+          </div>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function AthletesPage({ loaderData }: Route.ComponentProps) {
+  const { athletes, filters, pagination } = loaderData;
+  const actionData = useActionData<ActionData>();
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Athletes</h1>
+          <p className="text-gray-600">
+            Manage athlete profiles and information
+          </p>
+        </div>
+        <CreateAthleteDialog actionData={actionData} />
       </div>
+
+      {(actionData && 'error' in actionData) && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <p className="text-red-800">{actionData.error}</p>
+        </div>
+      )}
+
+      {(actionData && 'success' in actionData) && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4">
+          <p className="text-green-800">{actionData.message}</p>
+        </div>
+      )}
+
+      <FiltersSection filters={filters} />
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-600">
+          Showing {athletes.length} of {pagination.totalCount} athletes
+        </p>
+        <div className="text-sm text-gray-600">
+          Page {pagination.currentPage} of {pagination.totalPages}
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        {athletes.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-gray-500">No athletes found matching your criteria.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          athletes.map((athlete: any) => (
+            <AthleteCard 
+              key={athlete.id} 
+              athlete={athlete} 
+              actionData={actionData} 
+            />
+          ))
+        )}
+      </div>
+
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center space-x-2">
+          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
+            <Form key={page} method="get" className="inline">
+              <input type="hidden" name="status" value={filters.status} />
+              <input type="hidden" name="billingType" value={filters.billingType} />
+              <input type="hidden" name="search" value={filters.search || ""} />
+              <input type="hidden" name="page" value={page.toString()} />
+              <Button
+                type="submit"
+                variant={page === pagination.currentPage ? "default" : "outline"}
+                size="sm"
+              >
+                {page}
+              </Button>
+            </Form>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

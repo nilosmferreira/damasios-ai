@@ -1,13 +1,25 @@
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
+import { redirect } from "react-router";
+import { getUser } from "~/lib/auth.server";
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const user = await getUser(request);
+  
+  if (user) {
+    return redirect("/dashboard");
+  } else {
+    return redirect("/login");
+  }
+}
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "Sistema de Basquete" },
+    { name: "description", content: "Sistema de controle financeiro para basquete" },
   ];
 }
 
 export default function Home() {
-  return <Welcome />;
+  // Esta página nunca será renderizada devido ao redirect no loader
+  return null;
 }
