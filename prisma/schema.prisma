@@ -48,15 +48,16 @@ model User {
 
 model Athlete {
   id                 String           @id @default(uuid())
-  userId             String           @unique @map("user_id")
+  userId             String?          @unique @map("user_id") // Optional user relationship
   name               String
+  email              String?          @unique // Email for athletes without user account
   billingType        BillingType
   isActive           Boolean          @default(true) @map("is_active")
   preferredPositions PlayerPosition[]
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
 
-  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
   matchConfirmations  MatchConfirmation[]
   participations      Participation[]
   financialPendencies FinancialPending[]

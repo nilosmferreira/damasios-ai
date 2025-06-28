@@ -7,7 +7,7 @@ Um sistema completo para gestão de partidas de basquete e controle financeiro, 
 ✨ **Interface Modernizada**: Sidebar responsivo com navegação intuitiva  
 📊 **Dashboards Inteligentes**: Painéis personalizados por perfil (admin/atleta)  
 📱 **Mobile-First**: Experiência otimizada para todos os dispositivos  
-🎯 **UX Aprimorada**: Layout unificado e componentes Shadcn UI premium  
+🎯 **UX Aprimorada**: Layout unificado e componentes Shadcn UI premium
 
 ## 🚀 Tecnologias Utilizadas
 

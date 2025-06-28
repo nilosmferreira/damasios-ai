@@ -20,6 +20,12 @@ export const createAthleteSchema = z.object({
     .max(100, "Nome deve ter no máximo 100 caracteres")
     .regex(/^[a-zA-ZÀ-ÿ\s]+$/, "Nome pode conter apenas letras e espaços"),
     
+  email: z
+    .string()
+    .email("Email inválido")
+    .optional()
+    .or(z.literal("")),
+    
   billingType: z.enum(billingTypes, {
     errorMap: () => ({ message: "Por favor, selecione um tipo de cobrança válido" }),
   }),
@@ -30,7 +36,25 @@ export const createAthleteSchema = z.object({
     .max(3, "Você pode selecionar no máximo 3 posições preferidas"),
     
   isActive: z.boolean().default(true),
-});
+  
+  // User creation options
+  createUser: z.boolean().default(false),
+  userEmail: z.string().email("Email inválido").optional(),
+  userPassword: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional(),
+}).refine(
+  (data) => {
+    // If creating user, email and password are required
+    if (data.createUser) {
+      return data.userEmail && data.userPassword;
+    }
+    // If not creating user, at least email should be provided for contact
+    return data.email || data.userEmail;
+  },
+  {
+    message: "Email é obrigatório. Forneça um email para contato ou crie um usuário.",
+    path: ["email"],
+  }
+);
 
 // Schema for updating an athlete
 export const updateAthleteSchema = createAthleteSchema.partial().extend({

@@ -2,6 +2,7 @@ import type { Route } from "./+types/athletes";
 import { Form, useLoaderData, useActionData, useNavigation } from "react-router";
 import { prisma } from "~/lib/prisma/db.server";
 import { requireUser } from "~/lib/auth.server";
+import bcrypt from "bcryptjs";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
@@ -63,8 +64,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (filters.search) {
     whereClause.OR = [
       { name: { contains: filters.search, mode: "insensitive" } },
-      { user: { email: { contains: filters.search, mode: "insensitive" } } },
-    ];
+      { email: { contains: filters.search, mode: "insensitive" } },
+      { 
+        user: { 
+          email: { contains: filters.search, mode: "insensitive" } 
+        } 
+      },
+    ].filter(Boolean); // Remove undefined conditions
   }
 
   const [athletes, totalCount] = await Promise.all([
@@ -112,27 +118,66 @@ export async function action({ request }: Route.ActionArgs) {
       case "create": {
         const data = {
           name: formData.get("name"),
+          email: formData.get("email") || undefined,
           billingType: formData.get("billingType"),
           preferredPositions: formData.getAll("preferredPositions"),
           isActive: formData.get("isActive") === "true",
+          createUser: formData.get("createUser") === "true",
+          userEmail: formData.get("userEmail") || undefined,
+          userPassword: formData.get("userPassword") || undefined,
         };
 
         const validatedData = createAthleteSchema.parse(data);
 
-        // Create user first
-        const user = await prisma.user.create({
-          data: {
-            email: `${validatedData.name.toLowerCase().replace(/\s+/g, ".")}@temp.com`,
-            password: "temp123", // Should be changed on first login
-            role: "ATLETA",
-          },
-        });
+        let userId = null;
+
+        // Create user if requested
+        if (validatedData.createUser && validatedData.userEmail && validatedData.userPassword) {
+          // Check if email already exists
+          const existingUser = await prisma.user.findUnique({
+            where: { email: validatedData.userEmail },
+          });
+
+          if (existingUser) {
+            return { 
+              error: "Este email já está cadastrado", 
+              fieldErrors: { userEmail: ["Email já está em uso"] }
+            } as ActionData;
+          }
+
+          const user = await prisma.user.create({
+            data: {
+              email: validatedData.userEmail,
+              password: await bcrypt.hash(validatedData.userPassword, 10),
+              role: "ATLETA",
+            },
+          });
+          userId = user.id;
+        }
+
+        // Check if athlete email already exists (if provided)
+        if (validatedData.email) {
+          const existingAthlete = await prisma.athlete.findUnique({
+            where: { email: validatedData.email },
+          });
+
+          if (existingAthlete) {
+            return { 
+              error: "Este email já está cadastrado para outro atleta", 
+              fieldErrors: { email: ["Email já está em uso"] }
+            } as ActionData;
+          }
+        }
 
         // Create athlete
         await prisma.athlete.create({
           data: {
-            ...validatedData,
-            userId: user.id,
+            name: validatedData.name,
+            email: validatedData.email || validatedData.userEmail || null,
+            billingType: validatedData.billingType,
+            preferredPositions: validatedData.preferredPositions,
+            isActive: validatedData.isActive,
+            userId,
           },
         });
 
@@ -202,6 +247,7 @@ function AthleteFormFields({ athlete, actionData }: { athlete?: any; actionData?
   const [selectedPositions, setSelectedPositions] = useState<string[]>(
     athlete?.preferredPositions || []
   );
+  const [createUser, setCreateUser] = useState(false);
 
   const fieldErrors = (actionData && 'fieldErrors' in actionData) ? actionData.fieldErrors || {} : {};
 
@@ -219,6 +265,24 @@ function AthleteFormFields({ athlete, actionData }: { athlete?: any; actionData?
         {fieldErrors.name && (
           <p className="text-sm text-red-500">{fieldErrors.name[0]}</p>
         )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">Email para Contato</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          defaultValue={athlete?.email || ""}
+          placeholder="email@exemplo.com"
+          className={fieldErrors.email ? "border-red-500" : ""}
+        />
+        {fieldErrors.email && (
+          <p className="text-sm text-red-500">{fieldErrors.email[0]}</p>
+        )}
+        <p className="text-sm text-gray-600">
+          Email para contato (necessário se não criar usuário)
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -268,6 +332,58 @@ function AthleteFormFields({ athlete, actionData }: { athlete?: any; actionData?
           <p className="text-sm text-red-500">{fieldErrors.preferredPositions[0]}</p>
         )}
       </div>
+
+      {/* Seção de criação de usuário - apenas para novos atletas */}
+      {!athlete && (
+        <div className="border-t pt-4 space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="createUser"
+              name="createUser"
+              value="true"
+              checked={createUser}
+              onCheckedChange={(checked) => setCreateUser(checked === true)}
+            />
+            <Label htmlFor="createUser">Criar conta de usuário para este atleta</Label>
+          </div>
+
+          {createUser && (
+            <div className="space-y-4 ml-6 border-l-2 border-gray-200 pl-4">
+              <div className="space-y-2">
+                <Label htmlFor="userEmail">Email do Usuário *</Label>
+                <Input
+                  id="userEmail"
+                  name="userEmail"
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  className={fieldErrors.userEmail ? "border-red-500" : ""}
+                />
+                {fieldErrors.userEmail && (
+                  <p className="text-sm text-red-500">{fieldErrors.userEmail[0]}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="userPassword">Senha *</Label>
+                <Input
+                  id="userPassword"
+                  name="userPassword"
+                  type="password"
+                  placeholder="Mínimo 6 caracteres"
+                  className={fieldErrors.userPassword ? "border-red-500" : ""}
+                />
+                {fieldErrors.userPassword && (
+                  <p className="text-sm text-red-500">{fieldErrors.userPassword[0]}</p>
+                )}
+              </div>
+
+              <p className="text-sm text-blue-600">
+                O atleta poderá fazer login no sistema com essas credenciais
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center space-x-2">
         <Checkbox
@@ -370,7 +486,12 @@ function AthleteCard({ athlete, actionData }: { athlete: any; actionData?: Actio
               </Badge>
             </CardTitle>
             <CardDescription className="flex items-center gap-2">
-              {athlete.user.email}
+              {athlete.email || athlete.user?.email || "Sem email"}
+              {athlete.user && (
+                <Badge variant="secondary" className="text-xs">
+                  Com Acesso
+                </Badge>
+              )}
               <Badge variant="outline">
                 {getBillingTypeDisplayName(athlete.billingType)}
               </Badge>
