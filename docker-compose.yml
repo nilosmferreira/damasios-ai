@@ -1,11 +1,11 @@
 services:
   postgres:
     image: postgres:15-alpine
-    hostname: copilot-postgres
-    container_name: copilot-postgres
+    hostname: damasios-postgres
+    container_name: damasios-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: copilot
+      POSTGRES_DB: damasios
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       TZ: America/Recife
@@ -19,7 +19,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d copilot"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d damasios"]
       interval: 30s
       timeout: 10s
       retries: 3
