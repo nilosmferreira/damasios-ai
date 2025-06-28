@@ -2,6 +2,13 @@
 
 Um sistema completo para gestão de partidas de basquete e controle financeiro, construído com as tecnologias mais modernas.
 
+## 🎉 **Novo** - Versão 2.0.0 com Redesign Completo!
+
+✨ **Interface Modernizada**: Sidebar responsivo com navegação intuitiva  
+📊 **Dashboards Inteligentes**: Painéis personalizados por perfil (admin/atleta)  
+📱 **Mobile-First**: Experiência otimizada para todos os dispositivos  
+🎯 **UX Aprimorada**: Layout unificado e componentes Shadcn UI premium  
+
 ## 🚀 Tecnologias Utilizadas
 
 - **React Router v7** - Framework SSR/SPA moderno
@@ -32,12 +39,22 @@ Um sistema completo para gestão de partidas de basquete e controle financeiro, 
 - **Paginação**: Sistema otimizado para performance
 - **Validação Robusta**: Schemas Zod para todos os formulários
 
+### ✅ **Fase 3** - Redesign UI/UX _(v2.0.0)_
+
+- **Sidebar Responsivo**: Layout moderno com navegação lateral
+- **Dashboards Diferenciados**: Painéis específicos para admin e atletas
+- **Layout Unificado**: Sistema de layout consistente para todas as páginas
+- **Mobile-First**: Interface totalmente responsiva
+- **Navegação Inteligente**: Menu adaptativo baseado no papel do usuário
+- **Estatísticas em Tempo Real**: Cards dinâmicos com dados atualizados
+- **Componentes Modernos**: Shadcn UI para experiência premium
+
 ### 🎯 **Próximas Fases**
 
-- **Fase 3**: Gestão de Partidas (CRUD + Confirmações)
-- **Fase 4**: Controle Financeiro (Pendências + Fluxo de Caixa)
-- **Fase 5**: Sorteio de Quintetos
-- **Fase 6**: Relatórios e Refinamentos
+- **Fase 4**: Gestão de Partidas (CRUD + Confirmações)
+- **Fase 5**: Controle Financeiro (Pendências + Fluxo de Caixa)
+- **Fase 6**: Sorteio de Quintetos
+- **Fase 7**: Relatórios e Refinamentos
 
 ## �️ Setup do Projeto
 
